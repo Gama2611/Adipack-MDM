@@ -1,0 +1,14 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0
+jinja2>=3.1
+python-multipart>=0.0.9
+itsdangerous>=2.2
+pydantic-settings>=2.4
+qrcode[pil]>=7.4
+pyaxmlparser>=0.3.31
+tzdata>=2024.1         # zonas horarias en Windows (hora de Caracas en la consola)
+psycopg[binary]>=3.2      # sólo si usas PostgreSQL
+# pruebas
+pytest>=8
+httpx>=0.27

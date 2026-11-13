@@ -1,0 +1,62 @@
+{% extends "base.html" %}{% from "_icons.html" import icon %}
+{% block title %}Código de activación{% endblock %}
+{% block heading %}{{ 'Activar tablets' if et.policy.platform == 'android' else 'Activar PCs' }} · {{ et.policy.name }}{% endblock %}
+{% block sub %}Código #{{ et.id }} · usado {{ et.uses }} de {{ et.max_uses or '∞' }} · vence {{ et.expires_at|fecha('%d/%m/%Y') if et.expires_at else 'nunca' }}{% endblock %}
+{% block top_actions %}{% if et.policy.platform == 'android' and payload %}<button class="btn sec noprint" onclick="window.print()" data-keep="1">{{ icon('print') }} Imprimir QR</button>{% endif %}{% endblock %}
+{% block content %}
+{% if et.revoked %}<div class="alert err">{{ icon('x') }}<div>Este código fue <b>revocado</b> y ya no activa equipos. <a href="/devices/add">Genera uno nuevo</a>.</div></div>
+{% elif expired %}<div class="alert err">{{ icon('x') }}<div>Este código <b>venció</b>. <a href="/devices/add">Genera uno nuevo</a>.</div></div>
+{% elif exhausted %}<div class="alert warn">{{ icon('alert') }}<div>Este código ya se usó las {{ et.max_uses }} veces permitidas. <a href="/devices/add">Genera uno nuevo</a> para más equipos.</div></div>{% endif %}
+
+{% if et.policy.platform == 'android' %}
+  {% if err %}
+  <div class="alert err">{{ icon('x') }}<div><b>Todavía no se puede generar el QR.</b> {{ err }} <a href="/devices/add/android">Ir al asistente</a></div></div>
+  {% else %}
+  <div class="grid g2">
+    <div class="card" style="text-align:center">
+      <div class="qr"><img src="/enroll/{{ et.id }}/qr.png" alt="Código QR de activación" style="width:340px;max-width:100%;display:block"></div>
+      <h2 class="mt">ADIPACK MDM · {{ et.policy.name }}</h2>
+      <p class="muted small mb0">Las tablets quedarán como {{ et.name_prefix }}-01, {{ et.name_prefix }}-02…</p>
+    </div>
+    <div class="card noprint">
+      <h2>Cómo activar cada tablet</h2>
+      <div class="steps">
+        <div class="step"><div class="num">1</div><div class="t"><b>Restablece la tablet de fábrica</b><span>Ajustes › Sobre la tablet › Restablecer datos de fábrica. Si es nueva, sólo enciéndela.</span></div></div>
+        <div class="step"><div class="num">2</div><div class="t"><b>Toca 6 veces la pantalla de bienvenida</b><span>En un espacio vacío, no en botones. Se abre el lector de QR.</span></div></div>
+        <div class="step"><div class="num">3</div><div class="t"><b>Escanea este código</b><span>Si pide Wi-Fi, elige la red de planta. Acepta las pantallas de «dispositivo administrado».</span></div></div>
+        <div class="step"><div class="num">4</div><div class="t"><b>Espera de 2 a 5 minutos</b><span>Se instala el agente y la app, y la tablet entra sola en kiosco.</span></div></div>
+        <div class="step"><div class="num">5</div><div class="t"><b>Confírmalo en Inicio</b><span>La tablet aparece «En línea». Ponle su ubicación en la ficha.</span></div></div>
+      </div>
+      <details class="mt"><summary>¿No se abre el lector o sale «No se puede configurar»? Plan B por cable USB</summary>
+        <p class="small">Con la tablet restablecida, sin cuentas y con «Depuración USB» e «Instalar vía USB» activos (ver manual, sección 4.3), ejecuta en esta PC:</p>
+        <pre>python tools\provision_adb.py --server {{ public_url }} --token {{ et.token }} --agent agente.apk --app CMMS_ADIPACK_APP.apk --all</pre>
+      </details>
+    </div>
+  </div>
+  {% endif %}
+  <div class="noprint">{% include "_checks.html" %}</div>
+{% else %}
+  <div class="card" style="max-width:900px">
+    <h2>Instalar el agente en la PC</h2>
+    <p class="muted">Copia la carpeta <code>agent-pc</code> a la PC y ejecuta, como Administrador:</p>
+    <h3>Windows (PowerShell)</h3>
+    <pre>powershell -ExecutionPolicy Bypass -File install_windows.ps1 -Server {{ public_url }} -Token {{ et.token }}</pre>
+    <h3>Linux</h3>
+    <pre>python3 agent.py enroll --server {{ public_url }} --token {{ et.token }}
+python3 agent.py run</pre>
+    <p class="help">La PC aparecerá en Inicio como {{ et.name_prefix }}-01, {{ et.name_prefix }}-02…</p>
+  </div>
+{% endif %}
+
+<div class="card noprint">
+  <div class="card-h"><div><h2>Equipos activados con esta configuración</h2></div>
+    <div class="right"><a class="btn sec sm" href="/enroll/{{ et.id }}" data-keep="1">{{ icon('refresh') }} Actualizar</a></div></div>
+  {% if enrolled %}
+  <div class="table-wrap"><table><thead><tr><th>Equipo</th><th>Modelo</th><th>Activado</th><th>Estado</th></tr></thead><tbody>
+  {% for d in enrolled %}<tr><td><a href="/devices/{{ d.id }}"><b>{{ d.name }}</b></a></td><td>{{ d.manufacturer }} {{ d.model }}</td><td>{{ d.enrolled_at|fecha }}</td>
+    <td>{% if online(d) %}<span class="chip ok"><span class="dot"></span>En línea</span>{% else %}<span class="chip off">Desconectado</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<p class="muted mb0">Aún ninguno. Cuando una tablet termine la activación aparecerá aquí.</p>{% endif %}
+</div>
+{% if payload %}<details class="noprint"><summary>Contenido técnico del QR</summary><pre>{{ payload }}</pre></details>{% endif %}
+{% endblock %}
