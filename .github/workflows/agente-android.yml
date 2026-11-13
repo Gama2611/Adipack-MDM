@@ -105,7 +105,6 @@ jobs:
       # ------------------------------------------------------
       # 4. CONFIGURAR ANDROID SDK
       # ------------------------------------------------------
-
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v4
         with:
